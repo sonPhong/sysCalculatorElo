@@ -23,8 +23,6 @@ class Player {
         return this.elo += K * (result - rate);
     }
 
-
-
     // // thay đổi elo dựa trên kết quả random, xác xuất thắng, K mặc định cho vì chưa add condition change
     // updateElo(obj, result, K) {
     //     let rate = this.winRate(obj); // this call bình thường vì hàm not global
@@ -47,8 +45,8 @@ const createMatchs = (players, nMatch) => {
         // lấy random 2 thằng trong mớ arrPlayers, gán random rateWin
         let [player1, player2] = players.sort(() => Math.random() - 0.5).slice(0, 2);
         let result = Math.random() < 0.5 ? 0 : 1;
-        // player1.calElo(player2, result);
-        // player2.calElo(player1, 1 - result);
+        const newElo1 = player1.calElo(player2, result); // new elo chưa xử lý
+        const newElo2 = player2.calElo(player1, 1 - result);
         arrMatch.push({ player1: player1.name, player2: player2.name, winner: result ? player1.name : player2.name });
     }
     return arrMatch;
