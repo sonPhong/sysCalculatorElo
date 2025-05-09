@@ -1,20 +1,17 @@
+
 class MatchStats {
   generate(players) {
     let totalMatches = 0;
     let totalWins = 0;
     let totalLosses = 0;
-    let totalDraws = 0;
 
     players.forEach(player => {
-      player.history.forEach(match => {
-        if (match.win === true) totalWins++;
-        else if (match.win === false) totalLosses++;
-        else if (match.win === null) totalDraws++;
-        totalMatches++;
-      });
+      totalWins += player.wins;
+      totalLosses += player.losses;
+      totalMatches += player.wins + player.losses;
     });
 
-    return { totalMatches, totalWins, totalLosses, totalDraws };
+    return { totalMatches, totalWins, totalLosses, totalDraws: 0 }; // totalDraws luôn là 0
   }
 
   generatePlayerStats(player) {
@@ -66,5 +63,6 @@ class MatchStats {
     };
   }
 }
+
 
 module.exports = MatchStats;

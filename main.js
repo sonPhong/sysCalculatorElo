@@ -6,6 +6,12 @@ const EloScore = require('./classes/EloScore');
 const Ranking = require('./classes/Ranking');
 const RankingBoard = require('./classes/RankingBoard');
 const MatchStats = require('./classes/MatchStats');
+
+
+
+
+
+
 const readline = require('readline').createInterface({
   input: process.stdin,
   output: process.stdout,
@@ -105,8 +111,19 @@ async function simulateMatches(players, numMatches) {
 
     if (team1.length === TEAM_SIZE && team2.length === TEAM_SIZE) {
       const match = new Match(team1, team2);
-      const winner = match.simulate();
-      eloScore.updateMatchElo(team1, team2, winner);
+      const winnerTeam = match.simulate();
+      const eloChange = eloScore.updateMatchElo(team1, team2, winnerTeam);
+
+      team1.forEach(player => {
+        const win = winnerTeam === 1;
+        player.recordMatch(team2.map(p => p.id), win, player.elo - eloChange.team1[player.id], eloChange.team1[player.id]);
+      });
+
+      team2.forEach(player => {
+        const win = winnerTeam === 2;
+        player.recordMatch(team1.map(p => p.id), win, player.elo - eloChange.team2[player.id], eloChange.team2[player.id]);
+      });
+
       players.forEach(p => p.updateRank(ranking));
     }
   }
@@ -147,6 +164,7 @@ async function displayMatchHistory(players, playerId) {
 }
 
 async function displayPerformanceReport(players) {
+  console.log("Giá trị của matchStats:", matchStats); // Thêm dòng này
   const report = matchStats.generatePerformanceReport(players);
   console.log("\n======================== +--+ Báo cáo hiệu suất +-+ ========================\n");
   console.log("\nTop 5 người chơi tăng Elo nhiều nhất:");
@@ -162,7 +180,6 @@ async function displayOverallStats(players) {
   console.log(`Tổng số trận đấu đã diễn ra: ${overallStats.totalMatches}`);
   console.log(`Tổng số trận thắng: ${overallStats.totalWins}`);
   console.log(`Tổng số trận thua: ${overallStats.totalLosses}`);
-  console.log(`Tổng số trận hòa: ${overallStats.totalDraws}`);
   console.log("========================================================================\n");
 }
 

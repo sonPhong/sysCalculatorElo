@@ -1,3 +1,4 @@
+
 class RankingBoard {
   display(players, ranking) {
     const rankedPlayers = [...players].sort((a, b) => b.elo - a.elo);
@@ -8,5 +9,8 @@ class RankingBoard {
     console.log("========================================================================\n");
   }
 }
+
+
+
 
 module.exports = RankingBoard;

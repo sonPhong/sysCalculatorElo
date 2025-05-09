@@ -60,7 +60,7 @@ class Player {
       }).join(', ');
       return {
         opponentTeamNames: opponentNames,
-        win: match.win === true ? 'Thắng' : (match.win === false ? 'Thua' : 'Hòa'),
+        win: match.win === true ? 'Thắng' : 'Thua', // Loại bỏ trường hợp 'Hòa'
         newElo: match.newElo,
       };
     });

@@ -1,3 +1,4 @@
+
 class Ranking {
   getRank(elo) {
     if (elo <= 1200) {

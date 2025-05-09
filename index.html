@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hệ Thống Tính Elo</title>
+    <link rel="stylesheet" href="./css/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Hệ Thống Tính Điểm Elo</h1>
+
+        <div id="ranking-board-section">
+            <h2>Bảng Xếp Hạng</h2>
+            <table id="ranking-board-table">
+                <thead>
+                    <tr>
+                        <th>Hạng</th>
+                        <th>ID</th>
+                        <th>Tên</th>
+                        <th>Elo</th>
+                        <th>Rank</th>
+                    </tr>
+                </thead>
+                <tbody id="ranking-board-body">
+                </tbody>
+            </table>
+        </div>
+
+        <div id="player-input-container">
+            <input type="number" id="player-id-input" placeholder="Nhập ID người chơi">
+            <button id="view-stats-btn">Xem Thống Kê</button>
+            <button id="view-history-btn">Xem Lịch Sử Đấu</button>
+        </div>
+
+        <div id="player-stats">
+            </div>
+
+        <div id="match-history">
+            </div>
+
+        <button id="view-performance-btn">Xem Báo Cáo Hiệu Suất</button>
+        <div id="performance-report">
+            </div>
+
+        <button id="view-overall-btn">Xem Thống Kê Tổng Quan</button>
+        <div id="overall-stats">
+            </div>
+    </div>
+
+   
+</body>
+</html>

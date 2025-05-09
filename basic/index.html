@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hệ Thống Tính Elo</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <h1>Hệ Thống Tính Điểm Elo</h1>
+
+    <div class="container">
+        <div class="section" id="player-list-section">
+            <div id="player-list">
+                </div>
+        </div>
+
+        <div class="section" id="ranking-board-section">
+            <div id="ranking-board">
+                </div>
+        </div>
+
+        <div class="section" id="match-section">
+            <div id="match-actions">
+                </div>
+            <div id="match-list">
+                </div>
+        </div>
+
+        <div class="section" id="player-details-section">
+            <div id="player-details">
+                </div>
+        </div>
+    </div>
+
+    <script type="module" src="./classes/Player.js"></script>
+    <script type="module" src="./classes/Match.js"></script>
+    <script type="module" src="./classes/EloScore.js"></script>
+    <script type="module" src="./classes/Ranking.js"></script>
+    <script type="module" src="./classes/RankingBoard.js"></script>
+    <script type="module" src="./classes/MatchStats.js"></script>
+    <script type="module" src="./sysScript.js"></script>
+</body>
+</html>

@@ -1,0 +1,56 @@
+body {
+    font-family: sans-serif;
+    margin: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.container {
+    display: flex;
+    width: 90%;
+    max-width: 1200px;
+    gap: 20px;
+}
+
+.section {
+    flex: 1;
+    padding: 15px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    background-color: #f9f9f9;
+}
+
+h2 {
+    margin-top: 0;
+}
+
+button {
+    padding: 8px 15px;
+    margin-bottom: 10px;
+    cursor: pointer;
+}
+
+#ranking-board table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+#ranking-board th, #ranking-board td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+}
+
+#match-stats-list li {
+    margin-bottom: 5px;
+}
+
+#player-list li {
+    margin-bottom: 5px;
+}
+
+#match-list li {
+    margin-bottom: 5px;
+}
