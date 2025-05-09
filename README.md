@@ -8,26 +8,57 @@
 - Player: quản lý thông tin người chơi
 - Match: quản lý thông tin trận đấu
 - EloScore: quản lý update điểm elo
-- History: quản lý lịch sử trận đấu
-- Ranking: quản lý xếp hạng
+- Ranking: xử lý xếp hạng
+- RankingBoard: hiện bảng xếp hạng
+- MatchStats: thống kê thông số trận đấu
 - ResetElo: reset lại elo theo condition (mùa mới, giám đốc thích,...)
 
-## === Detail ===
-- Player: có id: ; name: ; status: ; elo: ; type: ; rank: ; history: .
-	+ status: random 0-1, phân tách 0 là player cũ, 1 là player mới
 
-	+ elo:	* if status = 0 (cũ) ==> elo = random từ 500 - 1500. 
-		* if status = 1 (mới) ==> elo = 1200. mặc định
-		* cập nhật lại điểm mới từ class EloScore.
+## Hướng xử lý
+- tạo ra các các đối tượng chính    +Player
+                                    +Match
+                                    +EloScore
+                                    +Ranking
+                                    +RankingBoard
+                                    +MatchStats
 
-	+ type: * if elo < 500 ==> type = 0. else = 1. nếu = chặn không được tạo trận đấu
+- Player: tạo đối tượng người chơi gồm thông tin cần, bắt buộc có status và type từ đầu để check điều kiện
+- Match: tạo ra đội đấu 
+- EloScore: xử lý điểm, tạo ra thông tin lưu về Player
+- Ranking: tạo phân loại xếp hạng
+- RankingBoard: dựa vào Player và Ranking lấy thông tin tính toán và hiển thị sắp xếp thứ hạng
+- MatchStats: mở rộng, bổ sung sau, thống kê toàn bộ thông tin liên quan người chơi, trận đấu
 
-	+ rank: lấy thông số từ class Ranking
+## Mô tả chi tiết feature và cần mở rộng
+- Player:   + Định nghĩa thông tin người chơi (ID,Name,Status,Elo,Type,Rank,History,Win,Lose,HistoryMatch,initialElo)
+            + Phương thức updateElo() đưa elo mới vào thay đổi và cập nhật lên elo, thay đổi history với thông số (win, oldElo, newElo, eloChange), call updateType()
+            + updateRank() gọi tới class Ranking xử lý trả về
+            + recordMatch() xử lý và ghi lại thông tin về đấu và thắng thua rồi udate qua history
+            + updateMathHistory() ghi lại thông tin mọi thứ sau cùng
+            + getWinRate() trả về tỉ lệ thắng từng người chơi sau tính toán
+            + getMatchHistoryDetail() trả về thông tin
 
-	+ history: chứa lịch sử tất cả trận + số điểm được tăng mỗi trận lấy về từ class history
+- Match:    + phân đội, xử lý thắng thua random với determineWinner() 
+            + trả về tỉ lệ random và đội thắng
 
-- Match: chia đội 5 người chơi vs 5 người ngẫu nhiên. tỉ lệ thắng thua random. 
+- Elo:Score:
+            + xử lý điểm với hệ số K gán cứng 32
+            + tính điểm chênh lệch theo tỉ lệ thắng expectedScore()
+            + cập nhật và tính toán 2 người chơi gọi về Plảye với updateElo() trả ra thông tin 2 người và mức điểm thay đổi
+            + cập nhật và tính toán elo người chơi dựa trên elo trung bình đội với updateMatchElo() sau đó gọi về Playẻ ghi két qủa, return 1 thông tin all người chơi
+            + 
 
-- EloScore: update elo 10 người dựa trên class Match, hệ số K là số động thay đổi được
+- Ranking:  + cập nhật mức rank, theo condition dựa trên elo, return tên rank getRank()
+            + return 1 sô nguyên để check thứ hạng giống condition trên getRankIndex()
 
-- Ranking: if elo <= 1200 = "Con gà"; 1200 < elo <= 1300 = "Con bò"; 1300 < elo <= 1500 = "Con người" ; 1500 < elo <= 2000 = "Dị nhân". sắp xếp theo thứ tự
+- RankingBoard: 
+            + nhận mảng chưa Player và Ranking để sắp xếp và return
+
+- MatchStats:
+            + thống kê tổng thể generate, duyệt qua Player lấy history return
+            + thống kê cá nhân generatePlayerStats() return thông tin condition
+            + gán cho all đối tượng generateAllPlayerStats()
+            + generateEloHistory() tạo lịch sử thay đổi elo, đang dùng time mặc định
+            + findCommonOpponents() tìm lịch sử đối đầu
+            + generatePerformanceReport() tạo bảng xếp hạng tăng elo cao, tỉ lệ win cao
+
