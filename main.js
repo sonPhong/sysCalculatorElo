@@ -7,11 +7,6 @@ const Ranking = require('./classes/Ranking');
 const RankingBoard = require('./classes/RankingBoard');
 const MatchStats = require('./classes/MatchStats');
 
-
-
-
-
-
 const readline = require('readline').createInterface({
   input: process.stdin,
   output: process.stdout,

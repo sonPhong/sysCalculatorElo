@@ -1,16 +1,72 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hệ Thống Tính Elo</title>
-    <link rel="stylesheet" href="./css/style.css">
+    <title>Hệ Thống Tính Điểm Elo</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            margin: 20px;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .ranking-section,
+        .player-actions,
+        .stats-section {
+            border: 1px solid #ccc;
+            padding: 15px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        th,
+        td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+
+        button {
+            padding: 8px 15px;
+            margin-right: 10px;
+            cursor: pointer;
+        }
+
+        input[type="number"] {
+            padding: 8px;
+            margin-right: 10px;
+            width: 150px;
+        }
+
+        #player-stats,
+        #match-history,
+        #performance-report,
+        #overall-stats {
+            margin-top: 20px;
+            border: 1px solid #eee;
+            padding: 10px;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
 </head>
+
 <body>
     <div class="container">
-        <h1>Hệ Thống Tính Điểm Elo</h1>
-
-        <div id="ranking-board-section">
+        <div class="ranking-section">
             <h2>Bảng Xếp Hạng</h2>
             <table id="ranking-board-table">
                 <thead>
@@ -27,27 +83,437 @@
             </table>
         </div>
 
-        <div id="player-input-container">
-            <input type="number" id="player-id-input" placeholder="Nhập ID người chơi">
-            <button id="view-stats-btn">Xem Thống Kê</button>
-            <button id="view-history-btn">Xem Lịch Sử Đấu</button>
+        <div class="player-actions">
+            <h2>Hành Động Người Chơi</h2>
+            <div>
+                <input type="number" id="player-id-input" placeholder="Nhập ID người chơi">
+                <button id="view-stats-btn">Xem Thống Kê</button>
+                <button id="view-history-btn">Xem Lịch Sử Đấu</button>
+            </div>
         </div>
 
-        <div id="player-stats">
-            </div>
-
-        <div id="match-history">
-            </div>
-
-        <button id="view-performance-btn">Xem Báo Cáo Hiệu Suất</button>
-        <div id="performance-report">
-            </div>
-
-        <button id="view-overall-btn">Xem Thống Kê Tổng Quan</button>
-        <div id="overall-stats">
-            </div>
+        <div class="stats-section">
+            <h2>Thống Kê</h2>
+            <div id="player-stats" class="hidden"></div>
+            <div id="match-history" class="hidden"></div>
+            <button id="view-performance-btn">Xem Báo Cáo Hiệu Suất</button>
+            <div id="performance-report" class="hidden"></div>
+            <button id="view-overall-btn">Xem Thống Kê Tổng Quan</button>
+            <div id="overall-stats" class="hidden"></div>
+        </div>
     </div>
 
-   
+    <script>
+        const PLAYERS_STORAGE_KEY = 'elo_players_data';
+        const NUM_PLAYERS = 20;
+        const NUM_MATCHES_PER_PLAYER = 50;
+        const TEAM_SIZE = 2;
+
+        class Player {
+            constructor(id, name, status, elo, type, rank, history = [], wins = 0, losses = 0, matchHistory = [], initialElo) {
+                this.id = id;
+                this.name = name;
+                this.status = status;
+                this.elo = Math.round(elo);
+                this.type = type;
+                this.rank = rank;
+                this.history = history;
+                this.wins = wins;
+                this.losses = losses;
+                this.matchHistory = matchHistory;
+                this.initialElo = initialElo !== undefined ? Math.round(initialElo) : Math.round(elo);
+            }
+
+            updateElo(newElo, eloChange) {
+                this.elo = Math.round(newElo);
+                this.history.push({ win: null, eloBefore: this.elo - eloChange, newElo: this.elo, eloChange: eloChange });
+                this.updateType();
+            }
+
+            updateType() {
+                this.type = this.elo < 500 ? 0 : 1;
+            }
+
+            updateRank(ranking) {
+                this.rank = ranking.getRank(this.elo);
+            }
+
+            recordMatch(opponentTeamIds, win, eloBefore, eloChange) {
+                this.history.push({ win: win, eloBefore: eloBefore, newElo: this.elo, eloChange: eloChange });
+                if (win) {
+                    this.wins++;
+                } else if (win !== null) {
+                    this.losses++;
+                }
+                this.updateMatchHistory(opponentTeamIds, win, this.elo);
+            }
+
+            updateMatchHistory(opponentTeamIds, win, newElo) {
+                this.matchHistory.push({
+                    opponentTeam: opponentTeamIds,
+                    win: win,
+                    newElo: newElo,
+                });
+            }
+
+            getWinRate() {
+                if (this.wins + this.losses === 0) {
+                    return 0;
+                }
+                return this.wins / (this.wins + this.losses);
+            }
+
+            getMatchHistoryDetail(allPlayers) {
+                return this.matchHistory.map(match => {
+                    const opponentNames = match.opponentTeam.map(id => {
+                        const player = allPlayers.find(p => p.id === id);
+                        return player ? player.name : 'Unknown Player';
+                    }).join(', ');
+                    return {
+                        opponentTeamNames: opponentNames,
+                        win: match.win === true ? 'Thắng' : 'Thua',
+                        newElo: match.newElo,
+                    };
+                });
+            }
+        }
+
+        class EloScore {
+            constructor(kFactor = 32) {
+                this.kFactor = kFactor;
+            }
+
+            expectedScore(ratingA, ratingB) {
+                return 1 / (1 + Math.pow(10, (ratingB - ratingA) / 400));
+            }
+
+            updateMatchElo(team1, team2, winner) {
+                const avgElo1 = team1.reduce((sum, p) => sum + p.elo, 0) / team1.length;
+                const avgElo2 = team2.reduce((sum, p) => sum + p.elo, 0) / team2.length;
+                const scoreTeam1 = winner === 1 ? 1 : 0;
+
+                team1.forEach(player => {
+                    const expected = this.expectedScore(player.elo, avgElo2);
+                    const newElo = player.elo + this.kFactor * (scoreTeam1 - expected);
+                    const eloChange = newElo - player.elo;
+                    player.updateElo(newElo, eloChange);
+                });
+
+                team2.forEach(player => {
+                    const expected = this.expectedScore(player.elo, avgElo1);
+                    const newElo = player.elo + this.kFactor * ((1 - scoreTeam1) - expected);
+                    const eloChange = newElo - player.elo;
+                    player.updateElo(newElo, eloChange);
+                });
+            }
+        }
+
+        class Match {
+            constructor(players1, players2) {
+                this.team1 = players1;
+                this.team2 = players2;
+            }
+
+            simulate() {
+                return Math.random() < 0.5 ? 1 : 2;
+            }
+        }
+
+        class MatchStats {
+            generate(players) {
+                let totalMatches = 0;
+                let totalWins = 0;
+                let totalLosses = 0;
+
+                players.forEach(player => {
+                    totalWins += player.wins;
+                    totalLosses += player.losses;
+                    totalMatches += player.wins + player.losses;
+                });
+
+                return { totalMatches, totalWins, totalLosses };
+            }
+
+            generatePlayerStats(player) {
+                return {
+                    playerId: player.id,
+                    playerName: player.name,
+                    wins: player.wins,
+                    losses: player.losses,
+                    winRate: (player.getWinRate() * 100).toFixed(2) + '%',
+                    initialElo: player.initialElo,
+                    currentElo: player.elo,
+                };
+            }
+
+            generatePerformanceReport(players) {
+                const sortedByEloGain = [...players].sort((a, b) => (b.elo - b.initialElo) - (a.elo - a.initialElo)).slice(0, 5);
+                const sortedByWinRate = [...players].sort((a, b) => b.getWinRate() - a.getWinRate()).slice(0, 5);
+
+                return {
+                    topEloGain: sortedByEloGain.map(p => ({ name: p.name, eloGain: p.elo - p.initialElo })),
+                    topWinRate: sortedByWinRate.map(p => ({ name: p.name, winRate: (p.getWinRate() * 100).toFixed(2) + '%' })),
+                };
+            }
+        }
+
+        class Ranking {
+            getRank(elo) {
+                if (elo <= 1200) return "Con gà";
+                if (elo <= 1300) return "Con bò";
+                if (elo <= 1400) return "Con người";
+                if (elo <= 1500) return "Dị nhân";
+                return "Siêu nhân";
+            }
+
+            getRankIndex(elo) {
+                if (elo <= 1200) return 0;
+                if (elo <= 1300) return 1;
+                if (elo <= 1400) return 2;
+                if (elo <= 1500) return 3;
+                return 4;
+            }
+        }
+
+        class RankingBoard {
+            constructor(tableBodyId) {
+                this.tableBody = document.getElementById(tableBodyId);
+            }
+
+            display(players, ranking) {
+                if (!this.tableBody) return;
+                this.tableBody.innerHTML = '';
+                const sortedPlayers = [...players].sort((a, b) => b.elo - a.elo);
+                sortedPlayers.forEach((player, index) => {
+                    const row = this.tableBody.insertRow();
+                    row.insertCell().textContent = index + 1;
+                    row.insertCell().textContent = player.id;
+                    row.insertCell().textContent = player.name;
+                    row.insertCell().textContent = player.elo;
+                    row.insertCell().textContent = ranking.getRank(player.elo);
+                });
+            }
+        }
+
+        const eloScore = new EloScore(32);
+        const ranking = new Ranking();
+        const rankingBoard = new RankingBoard('ranking-board-body');
+        const matchStats = new MatchStats();
+
+        let players = [];
+
+        async function loadPlayers() {
+            try {
+                const storedPlayers = localStorage.getItem(PLAYERS_STORAGE_KEY);
+                if (storedPlayers) {
+                    return JSON.parse(storedPlayers).map(p => new Player(p.id, p.name, p.status, p.elo, p.type, p.rank, p.history, p.wins, p.losses, p.matchHistory, p.initialElo));
+                }
+                return [];
+            } catch (error) {
+                console.error('Lỗi khi tải dữ liệu người chơi từ localStorage:', error);
+                return [];
+            }
+        }
+
+        async function savePlayers(players) {
+            try {
+                const data = JSON.stringify(players.map(p => ({ ...p, rank: undefined })), null, 2);
+                localStorage.setItem(PLAYERS_STORAGE_KEY, data);
+                console.log('Dữ liệu người chơi đã được lưu vào localStorage.');
+            } catch (error) {
+                console.error('Lỗi khi lưu dữ liệu người chơi vào localStorage:', error);
+            }
+        }
+
+        async function generateRandomPlayers(numPlayers) {
+            const players = [];
+            for (let i = 1; i <= numPlayers; i++) {
+                const status = Math.random() < 0.5 ? 0 : 1;
+                let elo;
+                if (status === 0) {
+                    const baseElo = Math.floor(Math.random() * (1500 - 500 + 1)) + 500;
+                    elo = baseElo + (Math.random() > 0.5 ? 1 : -1) * Math.floor(Math.random() * 5) * 100;
+                    elo = Math.max(500, Math.min(2000, Math.round(elo)));
+                } else {
+                    elo = 1200;
+                }
+                const newPlayer = new Player(i, `Player ${i}`, status, elo, null, null, [], 0, 0, [], elo);
+                newPlayer.updateType();
+                newPlayer.updateRank(ranking);
+                players.push(newPlayer);
+            }
+            return players;
+        }
+
+        async function simulateMatches(players, numMatches) {
+            for (let i = 0; i < numMatches; i++) {
+                const activePlayers = players.filter(p => p.type === 1);
+                if (activePlayers.length < TEAM_SIZE * 2) break;
+                const availablePlayers = activePlayers.filter(p => activePlayers.some(other => other !== p && Math.abs(ranking.getRankIndex(p.elo) - ranking.getRankIndex(other.elo)) <= 2));
+                if (availablePlayers.length < TEAM_SIZE * 2) continue;
+
+                let team1 = [];
+                let team2 = [];
+                const remainingPlayers = [...availablePlayers];
+
+                for (let j = 0; j < TEAM_SIZE; j++) {
+                    if (remainingPlayers.length === 0) break;
+                    const player1Index = Math.floor(Math.random() * remainingPlayers.length);
+                    const player1 = remainingPlayers.splice(player1Index, 1)[0];
+                    team1.push(player1);
+
+                    const potentialOpponents = remainingPlayers.filter(p => Math.abs(ranking.getRankIndex(player1.elo) - ranking.getRankIndex(p.elo)) <= 2);
+                    if (potentialOpponents.length === 0) break;
+                    const player2Index = Math.floor(Math.random() * potentialOpponents.length);
+                    const player2 = potentialOpponents[player2Index];
+                    remainingPlayers.splice(remainingPlayers.indexOf(player2), 1);
+                    team2.push(player2);
+                }
+
+                if (team1.length === TEAM_SIZE && team2.length === TEAM_SIZE) {
+                    const match = new Match(team1, team2);
+                    const winner = match.simulate();
+                    eloScore.updateMatchElo(team1, team2, winner);
+                    team1.forEach(p => p.recordMatch(team2.map(op => op.id), winner === 1, p.elo, 0)); // Elo change is handled in updateMatchElo
+                    team2.forEach(p => p.recordMatch(team1.map(op => op.id), winner === 2, p.elo, 0));
+                    players.forEach(p => p.updateRank(ranking));
+                }
+            }
+        }
+
+        function displayPlayerStats(playerId) {
+            const player = players.find(p => p.id === parseInt(playerId));
+            const statsContainer = document.getElementById('player-stats');
+            if (player) {
+                const stats = matchStats.generatePlayerStats(player);
+                statsContainer.innerHTML = `
+                    <h2>Thống kê cho ${player.name} (ID: ${player.id})</h2>
+                    <p>Elo hiện tại: ${player.elo}</p>
+                    <p>Số trận thắng: ${stats.wins}</p>
+                    <p>Số trận thua: ${stats.losses}</p>
+                    <p>Tỷ lệ thắng: ${stats.winRate}</p>
+                    <p>Elo ban đầu: ${stats.initialElo}</p>
+                `;
+                statsContainer.classList.remove('hidden');
+            } else {
+                statsContainer.innerHTML = `<p>Không tìm thấy người chơi với ID ${playerId}.</p>`;
+                statsContainer.classList.remove('hidden');
+            }
+            document.getElementById('match-history').classList.add('hidden');
+            document.getElementById('performance-report').classList.add('hidden');
+            document.getElementById('overall-stats').classList.add('hidden');
+        }
+
+        function displayMatchHistory(playerId) {
+            const player = players.find(p => p.id === parseInt(playerId));
+            const historyContainer = document.getElementById('match-history');
+            if (player) {
+                const historyDetail = player.getMatchHistoryDetail(players);
+                let historyHTML = `<h2>Lịch sử đấu của ${player.name} (ID: ${player.id})</h2>`;
+                if (historyDetail.length > 0) {
+                    historyHTML += '<ul>';
+                    historyDetail.forEach(match => {
+                        historyHTML += `<li>Đối đầu với: ${match.opponentTeamNames}, Kết quả: ${match.win}, Elo mới: ${match.newElo}</li>`;
+                    });
+                    historyHTML += '</ul>';
+                } else {
+                    historyHTML += '<p>Chưa có lịch sử đấu.</p>';
+                }
+                historyContainer.innerHTML = historyHTML;
+                historyContainer.classList.remove('hidden');
+            } else {
+                historyContainer.innerHTML = `<p>Không tìm thấy người chơi với ID ${playerId}.</p>`;
+                historyContainer.classList.remove('hidden');
+            }
+            document.getElementById('player-stats').classList.add('hidden');
+            document.getElementById('performance-report').classList.add('hidden');
+            document.getElementById('overall-stats').classList.add('hidden');
+        }
+
+        function displayPerformanceReport() {
+            const reportContainer = document.getElementById('performance-report');
+            const report = matchStats.generatePerformanceReport(players);
+            let reportHTML = `<h2>Báo cáo hiệu suất</h2>`;
+            reportHTML += `<h3>Top 5 người chơi tăng Elo nhiều nhất:</h3><ul>`;
+            report.topEloGain.forEach(p => reportHTML += `<li>${p.name}: +${p.eloGain}</li>`);
+            reportHTML += `</ul><h3>Top 5 người chơi có tỷ lệ thắng cao nhất:</h3><ul>`;
+            report.topWinRate.forEach(p => reportHTML += `<li>${p.name}: ${p.winRate}</li>`);
+            reportHTML += `</ul>`;
+            reportContainer.innerHTML = reportHTML;
+            reportContainer.classList.remove('hidden');
+            document.getElementById('player-stats').classList.add('hidden');
+            document.getElementById('match-history').classList.add('hidden');
+            document.getElementById('overall-stats').classList.add('hidden');
+        }
+
+        function displayOverallStats() {
+            const statsContainer = document.getElementById('overall-stats');
+            const overallStats = matchStats.generate(players);
+            statsContainer.innerHTML = `
+                <h2>Thống kê tổng quan</h2>
+                <p>Tổng số trận đấu đã diễn ra: ${overallStats.totalMatches}</p>
+                <p>Tổng số trận thắng: ${overallStats.totalWins}</p>
+                <p>Tổng số trận thua: ${overallStats.totalLosses}</p>`;
+            statsContainer.classList.remove('hidden');
+            document.getElementById('player-stats').classList.add('hidden');
+            document.getElementById('match-history').classList.add('hidden');
+            document.getElementById('performance-report').classList.add('hidden');
+        }
+
+        function displayRanking() {
+            const rankingTableBody = document.getElementById('ranking-board-body');
+            rankingTableBody.innerHTML = '';
+            const sortedPlayers = [...players].sort((a, b) => b.elo - a.elo);
+            sortedPlayers.forEach((player, index) => {
+                const row = rankingTableBody.insertRow();
+                row.insertCell().textContent = index + 1;
+                row.insertCell().textContent = player.id;
+                row.insertCell().textContent = player.name;
+                row.insertCell().textContent = player.elo;
+                row.insertCell().textContent = ranking.getRank(player.elo);
+            });
+        }
+
+        async function initialize() {
+            players = await loadPlayers();
+
+            if (players.length === 0) {
+                console.log('Không tìm thấy dữ liệu người chơi hoặc dữ liệu rỗng. Tạo người chơi ngẫu nhiên...');
+                players = await generateRandomPlayers(NUM_PLAYERS);
+                await savePlayers(players);
+            } else {
+                console.log('Đã tải dữ liệu người chơi.');
+                players.forEach(p => {
+                    p.updateType();
+                    p.updateRank(ranking);
+                });
+            }
+
+            for (let i = 0; i < NUM_MATCHES_PER_PLAYER; i++) {
+                await simulateMatches(players, NUM_PLAYERS / (TEAM_SIZE * 2));
+            }
+
+            await savePlayers(players);
+            displayRanking();
+            displayOverallStats();
+            displayPerformanceReport();
+        }
+
+        document.addEventListener('DOMContentLoaded', initialize);
+
+        document.getElementById('view-stats-btn').addEventListener('click', () => {
+            const playerId = document.getElementById('player-id-input').value;
+            displayPlayerStats(playerId);
+        });
+
+        document.getElementById('view-history-btn').addEventListener('click', () => {
+            const playerId = document.getElementById('player-id-input').value;
+            displayMatchHistory(playerId);
+        });
+
+        document.getElementById('view-performance-btn').addEventListener('click', displayPerformanceReport);
+        document.getElementById('view-overall-btn').addEventListener('click', displayOverallStats);
+    </script>
 </body>
+
 </html>
